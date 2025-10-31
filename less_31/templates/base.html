@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{block "title" .}}Блог{{end}}</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #f4f4f4;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header, footer {
+            background-color: #1e1e1e;
+            padding: 1em;
+            text-align: center;
+        }
+        h1, h2, h3 {
+            color: #ff6600;
+        }
+        nav a {
+            color: #ff6600;
+            margin: 0 10px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+            color: #ffa366;
+        }
+        main {
+            padding: 2em;
+        }
+        article {
+            background: #1c1c1c;
+            border-left: 4px solid #ff6600;
+            padding: 1em;
+            margin-bottom: 1.5em;
+            border-radius: 5px;
+        }
+        form {
+            background: #1c1c1c;
+            border: 1px solid #ff6600;
+            padding: 1.5em;
+            border-radius: 6px;
+            max-width: 600px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ff6600;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #f4f4f4;
+            margin-bottom: 1em;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus {
+            border-color: #ffa366;
+            outline: none;
+        }
+        button {
+            background-color: #ff6600;
+            color: #121212;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #e65c00;
+            transform: scale(1.05);
+        }
+        a.panel-link {
+            display: inline-block;
+            margin-top: 1em;
+            background: #ff6600;
+            color: #121212;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a.panel-link:hover {
+            background: #e65c00;
+        }
+        footer {
+            margin-top: 2em;
+            font-size: 0.8em;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📝 Go Blog</h1>
+        <nav>
+            <a href="/blog">Блог</a> | 
+            <a href="/admin">Админка</a>
+        </nav>
+    </header>
+    <main>
+        {{block "content" .}}{{end}}
+    </main>
+    <footer>
+        <p>&copy; 2025 My Go Blog</p>
+    </footer>
+</body>
+</html>
+

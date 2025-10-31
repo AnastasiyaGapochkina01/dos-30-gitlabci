@@ -1,0 +1,11 @@
+{{define "title"}}Админка блога{{end}}
+{{define "content"}}
+    <h2>Админка: добавить статью</h2>
+    <form action="/admin" method="post">
+        <input type="text" name="title" placeholder="Заголовок" required>
+        <textarea name="content" rows="7" placeholder="Текст статьи" required></textarea>
+        <button type="submit">⚡ Опубликовать</button>
+    </form>
+    <p><a class="panel-link" href="/blog">← Назад к блогу</a></p>
+{{end}}
+

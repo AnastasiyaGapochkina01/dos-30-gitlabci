@@ -1,0 +1,14 @@
+{{define "title"}}Блог{{end}}
+{{define "content"}}
+    <h2>Последние записи</h2>
+    {{range .}}
+        <article>
+            <h3>{{.Title}}</h3>
+            <p>{{.Content}}</p>
+            <small>Опубликовано: {{.Created}}</small>
+        </article>
+    {{else}}
+        <p>Пока нет постов.</p>
+    {{end}}
+{{end}}
+

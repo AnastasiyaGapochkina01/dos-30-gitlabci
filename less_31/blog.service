@@ -1,0 +1,18 @@
+[Unit]
+Description=Go Blog Application
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/app/blog-backend
+WorkingDirectory=/opt/app
+Restart=on-failure
+RestartSec=5
+User=gitlab-runner
+Group=gitlab-runner
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

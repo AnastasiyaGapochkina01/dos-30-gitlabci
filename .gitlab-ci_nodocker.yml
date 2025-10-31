@@ -1,0 +1,95 @@
+stages:
+  - linting
+  - unit-test
+  - build
+  - deploy
+  - tests
+  - notify
+
+variables:
+  APP_NAME: blog-backend
+  SSH_USER: gitlab-runner
+  HOST: 158.160.23.25
+  PRJ_DIR: /opt/app
+  SSH_OPT: -o StrictHostKeyChecking=no
+  PORT: 8000
+  API_URL: https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage
+  TELEGRAM_CHAT_ID: 641041957
+  TIMEOUT: 5
+
+check-code:
+  stage: linting
+  image: golang:1.25
+  script:
+    - go vet ./...
+  tags:
+    - dos-30-runner
+  
+lint-code:
+  stage: linting
+  image: golangci/golangci-lint
+  script:
+    - golangci-lint run -v
+  tags:
+    - dos-30-runner
+  allow_failure: true
+
+unit-tests:
+  stage: unit-test
+  image: golang:1.25
+  script:
+    - go test -v ./... > blog_tests_result
+  artifacts:
+    paths:
+      - blog_tests_result
+  tags:
+    - dos-30-runner
+
+build-src:
+  stage: build
+  image: golang:1.25
+  script:
+    - go build -o ${APP_NAME} main.go
+  artifacts:
+    paths:
+      - ${APP_NAME}
+  tags:
+    - dos-30-runner
+
+deploy-demo:
+  stage: deploy
+  image: alpine
+  needs:
+    - build-src
+  before_script:
+    - apk add --no-cache openssh rsync
+    - cat "$SSH_KEY" > id_ed25519
+    - chmod 600 id_ed25519
+  script: |
+      ssh ${SSH_OPT} -i id_ed25519 ${SSH_USER}@${HOST} "sudo mkdir -p ${PRJ_DIR} && sudo chown -R ${SSH_USER}:${SSH_USER} ${PRJ_DIR}"
+      scp -i id_ed25519 ${APP_NAME} ${SSH_USER}@${HOST}:${PRJ_DIR}
+      scp -i id_ed25519 -r templates ${SSH_USER}@${HOST}:${PRJ_DIR}
+      scp -i id_ed25519 blog.service ${SSH_USER}@${HOST}:/home/gitlab-runner/blog.service
+      ssh ${SSH_OPT} -i id_ed25519 ${SSH_USER}@${HOST} "sudo cp /home/gitlab-runner/blog.service /etc/systemd/system/blog.service && sudo systemctl daemon-reload && sudo systemctl restart blog.service"
+  tags:
+    - dos-30-runner
+
+smoke-tests:
+  stage: tests
+  image: curlimages/curl
+  needs:
+    - deploy-demo
+  script:
+    - echo "Check /blog"
+    - curl -f http://${HOST}:${PORT}/blog
+    - echo "Check /admin"
+    - curl -f http://${HOST}:${PORT}/admin
+
+notify-tg:
+  stage: notify
+  image: curlimages/curl
+  before_script: |
+      export URL=${API_URL}
+      export TEXT="Deploy Project: $CI_PROJECT_NAME%0ABranch: $CI_COMMIT_REF_NAME%0APipeline: $CI_PIPELINE_URL%0AUser: $GITLAB_USER_NAME"
+  script:
+    - curl -s --max-time $TIMEOUT -d "chat_id=$TELEGRAM_CHAT_ID&disable_web_page_preview=1&text=$TEXT" $URL > /dev/null

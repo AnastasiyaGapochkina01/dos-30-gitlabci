@@ -1,0 +1,84 @@
+stages:
+  - linting
+  - build
+  - deploy
+
+variables:
+  DOCKER_USER: anestesia01
+  DOCKER_REPO: anestesia01/dos-30
+  IMAGE_TAG: blog-$CI_COMMIT_SHORT_SHA
+  REGISTRY_URL: https://index.docker.io/v1/
+  SSH_OPT: -o StrictHostKeyChecking=no
+  SSH_USER: gitlab-runner
+  HOST: 158.160.23.25
+  CONT_NAME: blog-cont-01
+  EXT_PORT: 8001
+  INT_PORT: 8000
+
+lint-docker:
+  stage: linting
+  image: hadolint/hadolint:latest-debian
+  script:
+    - hadolint Dockerfile
+  allow_failure: true
+
+build-image-dind:
+  stage: build
+  services:
+    - name: docker:dind
+      alias: docker
+  image: docker:28.5.1
+  before_script:
+    - docker login -u ${DOCKER_USER} -p ${DOCKER_TOKEN}
+  script:
+    - docker build -t ${DOCKER_REPO}:dind-${IMAGE_TAG} ./
+    - docker push ${DOCKER_REPO}:dind-${IMAGE_TAG}
+  after_script:
+    - docker logout
+
+build-image-kaniko:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${REGISTRY_URL}\":{\"username\":\"${DOCKER_USER}\",\"password\":\"${DOCKER_TOKEN}\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${DOCKER_REPO}:${IMAGE_TAG}"
+
+deploy-standalone:
+  stage: deploy
+  image: alpine
+  services:
+    - name: docker:dind
+      alias: docker
+  before_script:
+    - apk add --no-cache openssh rsync
+    - cat "$SSH_KEY" > id_ed25519
+    - chmod 600 id_ed25519
+  script: |
+      ssh ${SSH_OPT} -i id_ed25519 ${SSH_USER}@${HOST} "
+        docker pull ${DOCKER_REPO}:${IMAGE_TAG} && 
+        docker rm -f $CONT_NAME || true && 
+        docker run -d -it --name $CONT_NAME -p ${EXT_PORT}:${INT_PORT} ${DOCKER_REPO}:${IMAGE_TAG}
+      "
+  when: manual
+
+deploy-compose:
+  stage: deploy
+  image: docker:28.5.1
+  variables:
+    APP_IMAGE: ${DOCKER_REPO}:${IMAGE_TAG}
+  before_script:
+    - apk add gettext openssh
+    - eval $(ssh-agent -s)
+    - chmod 600 $SSH_KEY
+    - ssh-add $SSH_KEY
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - envsubst < compose.tmpl > compose.yml
+    - scp SSH_OPT compose.yml ${SSH_USER}@${HOST}:/home/gitlab-runner
+    - |
+        ssh ${SSH_OPT} ${SSH_USER}@${HOST} "docker compose -f /home/gitlab-runner/compose.yml up -d"
+  when: manual
