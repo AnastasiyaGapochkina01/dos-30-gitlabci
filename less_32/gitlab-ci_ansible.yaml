@@ -1,0 +1,66 @@
+image: alpine
+
+stages:
+  - syntax-check
+  - lint
+  - dry-run
+  - apply
+
+before_script:
+  - apk update && apk add curl python3 bash ansible ansible-lint jq openssh
+  - |
+      echo "$SSH_KEY" > id_ed25519
+      chmod 600 id_ed25519
+      mkdir ~/.ssh
+      chmod 700 ~/.ssh
+      echo -e "Host *\nStrictHostKeyChecking no\n\n" > ~/.ssh/config
+
+.default_rules: &default_rules
+    - if: '$CI_MERGE_REQUEST_ID'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - when: never
+
+variables:
+  PLAYBOOK: simple-playbook.yaml
+  HOST: 89.169.190.145
+  USER: gitlab-runner
+
+syntax-check:job:
+  stage: syntax-check
+  before_script:
+    - apk update && apk add curl python3 bash ansible ansible-lint jq openssh
+  script:
+    - ansible-playbook ${PLAYBOOK} --syntax-check
+  rules:
+    *default_rules
+  tags:
+    - dos-30-runner
+
+lint:job:
+  stage: lint
+  script:
+    - ansible-lint ${PLAYBOOK}
+  rules:
+    *default_rules
+  tags:
+    - dos-30-runner
+  allow_failure: true
+
+dry-run:job:
+  stage: dry-run
+  script:
+    - ansible-playbook --private-key id_ed25519 -i "${HOST}," -u ${USER} ${PLAYBOOK} --check
+  rules:
+    *default_rules
+  tags:
+    - dos-30-runner
+
+apply:job:
+  stage: apply
+  script:
+    - ansible-playbook --private-key id_ed25519 -i "${HOST}," -u ${USER} ${PLAYBOOK} --diff
+  rules:
+    - when: manual
+    - when: never
+  tags:
+    - dos-30-runner
