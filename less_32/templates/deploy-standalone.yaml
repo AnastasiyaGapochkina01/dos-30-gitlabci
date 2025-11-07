@@ -1,0 +1,22 @@
+include:
+  - local: 'vars.yaml'
+  
+deploy-standalone:
+  stage: deploy
+  image: alpine
+  services:
+    - name: docker:dind
+      alias: docker
+  before_script:
+    - apk add --no-cache openssh rsync
+    - cat "$SSH_KEY" > id_ed25519
+    - chmod 600 id_ed25519
+  script: |
+      ssh ${SSH_OPT} -i id_ed25519 ${SSH_USER}@${HOST} "
+        docker pull ${DOCKER_REPO}:${IMAGE_TAG} && 
+        docker rm -f $CONT_NAME || true && 
+        docker run -d -it --name $CONT_NAME -p ${EXT_PORT}:${INT_PORT} ${DOCKER_REPO}:${IMAGE_TAG}
+      "
+  when: manual
+  tags:
+    - ${RUNNER_TAG}

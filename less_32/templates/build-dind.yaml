@@ -1,0 +1,19 @@
+build-image-dind:
+  stage: build
+  services:
+    - name: docker:dind
+      alias: docker
+  image: docker:${DOCKER_EXECUTOR_VER}
+  before_script:
+    - docker login -u ${DOCKER_USER} -p ${DOCKER_TOKEN}
+  script:
+    - docker build -t ${DOCKER_REPO}:dind-${IMAGE_TAG} ./
+    - docker push ${DOCKER_REPO}:dind-${IMAGE_TAG}
+  after_script:
+    - docker logout
+  tags:
+    - ${RUNNER_TAG}
+  rules:
+    - if: '$BUILD_TOOL == "dind"'
+      when: always
+    - when: never

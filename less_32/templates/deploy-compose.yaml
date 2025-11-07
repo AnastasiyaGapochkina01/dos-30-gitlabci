@@ -1,0 +1,27 @@
+include:
+  - local: 'vars.yaml'
+  
+deploy-compose:
+  stage: deploy
+  image: docker:${DOCKER_EXECUTOR_VER}
+  variables:
+    APP_IMAGE: ${DOCKER_REPO}:${IMAGE_TAG}
+  before_script:
+    - apk add gettext openssh
+    - eval $(ssh-agent -s)
+    - chmod 600 $SSH_KEY
+    - ssh-add $SSH_KEY
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - envsubst < compose.tmpl > compose.yml
+    - |
+      ssh ${SSH_OPT} ${SSH_USER}@${HOST} "
+        [ ! -d ${PRJ_DIR} ] && sudo mkdir -p ${PRJ_DIR} && sudo chown ${SSH_USER}:${SSH_USER} ${PRJ_DIR}
+      "
+    - scp SSH_OPT compose.yml ${SSH_USER}@${HOST}:${PRJ_DIR}
+    - |
+        ssh ${SSH_OPT} ${SSH_USER}@${HOST} "docker compose -f ${PRJ_DIR}/compose.yml up -d"
+  when: manual
+  tags:
+    - ${RUNNER_TAG}

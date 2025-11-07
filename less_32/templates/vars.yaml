@@ -1,0 +1,14 @@
+variables:
+  DOCKER_USER: ""
+  DOCKER_REPO: ""
+  IMAGE_TAG: ""
+  REGISTRY_URL: ""
+  SSH_OPT: ""
+  SSH_USER: ""
+  HOST: ""
+  CONT_NAME: ""
+  EXT_PORT: ""
+  INT_PORT: ""
+  PRJ_DIR: ""
+  DOCKER_EXECUTOR_VER: 28.5.1
+  RUNNER_TAG: dos-30-runner

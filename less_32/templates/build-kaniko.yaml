@@ -1,0 +1,18 @@
+
+build-image-kaniko:
+  stage: build
+  variables:
+    BUILD_TOOL: ""
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${REGISTRY_URL}\":{\"username\":\"${DOCKER_USER}\",\"password\":\"${DOCKER_TOKEN}\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${DOCKER_REPO}:${IMAGE_TAG}"
+  tags:
+    - ${RUNNER_TAG}
+  rules:
+    - if: '$BUILD_TOOL == "kaniko"'
+      when: always
+    - when: never
