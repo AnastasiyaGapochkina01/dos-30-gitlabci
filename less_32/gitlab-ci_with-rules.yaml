@@ -1,0 +1,64 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /#run/'
+      when: always
+    - when: never
+
+image: alpine
+
+stages:
+  - build
+  - test
+  - deploy
+
+before_script:
+  - apk update && apk add curl python3 bash
+
+build:job:
+  stage: build
+  script:
+    - bash build.sh
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH =~ "/^build\//"'
+      when: manual
+    - when: never
+  tags:
+    - dos-30-runner
+
+test:job:
+  stage: test
+  script:
+    - bash tests/run-tests.sh
+  rules:
+    - changes:
+      - src/*
+      - tests/*
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == "main"'
+      when: always
+    - when: manual
+  allow_failure: true
+  tags:
+    - dos-30-runner
+
+deploy-prod:job:
+  stage: deploy
+  script:
+    - echo "Deploy to prod"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+      when: manual
+    - when: never
+  tags:
+    - dos-30-runner
+    
+deploy-stage:job:
+  stage: deploy
+  script:
+    - echo "Deploy to stage"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "stage"'
+    - when: never
+  tags:
+    - dos-30-runner
